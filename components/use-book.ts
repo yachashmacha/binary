@@ -35,13 +35,14 @@ const EMPTY: Overrides = { kols: {}, metas: {} };
 export function useBook() {
   const params = useSearchParams();
   const source = params.get("source");
+  const demo = params.get("demo") === "1";
   const requested = (params.get("address") ?? "").trim();
   const address = source === "csv" ? "" : requested || TRADER_WALLET;
   const depth = params.get("depth") ?? (address === TRADER_WALLET ? TRADER_DEPTH : "200");
   const terminalParam = params.get("terminal");
   const terminal: TerminalId = isTerminalId(terminalParam) ? terminalParam : address === TRADER_WALLET ? TRADER_TERMINAL : "axiom";
-  const bookKey = source === "csv" ? "csv" : address || "unknown";
-  const search = bookSearch({ demo: false, source, address, terminal, depth });
+  const bookKey = source === "csv" ? "csv" : demo ? "sample" : address || "unknown";
+  const search = bookSearch({ demo, source, address, terminal, depth });
 
   const [book, setBook] = useState<Book | null>(null);
   const [error, setError] = useState("");
@@ -74,7 +75,7 @@ export function useBook() {
       setLoading(false);
       return;
     }
-    if (!isWalletAddress(address)) {
+    if (!demo && !isWalletAddress(address)) {
       setError("This desk link is missing a Solana address.");
       setBook(null);
       setLoading(false);
@@ -83,7 +84,13 @@ export function useBook() {
     const controller = new AbortController();
     setLoading(true);
     setError("");
-    fetch(`/api/book?address=${encodeURIComponent(address)}&terminal=${terminal}&depth=${encodeURIComponent(depth)}`, {
+    const query = new URLSearchParams({
+      address,
+      terminal,
+      depth,
+    });
+    if (demo) query.set("demo", "1");
+    fetch(`/api/book?${query}`, {
       signal: controller.signal,
     })
       .then(async (response) => {
@@ -100,7 +107,7 @@ export function useBook() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [source, address, terminal, depth, reloadKey]);
+  }, [source, demo, address, terminal, depth, reloadKey]);
 
   useEffect(() => {
     if (!book || book.source !== "wallet" || book.trades.length === 0) {
