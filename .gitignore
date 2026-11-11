@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+.vercel
+*.log
+.env
+.env.local
+.env*.local
+.gropy-wallet.json
+tsconfig.tsbuildinfo
+next-env.d.ts
